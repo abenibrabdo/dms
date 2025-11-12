@@ -1,0 +1,16 @@
+import { Router } from 'express';
+
+import { authenticate, authorize } from '@middlewares/auth.js';
+import { validate } from '@middlewares/validation.js';
+
+import { loginSchema, registerSchema } from './auth.schema.js';
+import { listUsersHandler, loginHandler, registerHandler } from './auth.controller.js';
+
+const router = Router();
+
+router.post('/register', authenticate, authorize(['admin']), validate(registerSchema), registerHandler);
+router.post('/login', validate(loginSchema), loginHandler);
+router.get('/', authenticate, authorize(['admin']), listUsersHandler);
+
+export const authRouter = router;
+
