@@ -1,48 +1,105 @@
 import { NotFoundError } from '@core/errors.js';
 import { logger } from '@core/logger.js';
 
+import { sequelize } from '@core/database.js';
 import { RealtimeChannels } from '@core/events.js';
 import { publishMessage } from '@core/queue.js';
 import { broadcastEvent } from '@core/socket.js';
 import { recordAuditLog } from '@modules/audit/audit.service.js';
+import { getFilePublicUrl } from '@core/storage.js';
 
-import { DocumentModel, type ManagedDocument } from './document.model.js';
+import {
+  DocumentModel,
+  DocumentVersionModel,
+  type ManagedDocument,
+  type DocumentMetadata,
+  type DocumentVersionAttributes,
+} from './document.model.js';
 import type {
   AddDocumentVersionInput,
   CreateDocumentInput,
   UpdateDocumentMetadataInput,
 } from './document.types.js';
 
+const documentInclude = [
+  {
+    model: DocumentVersionModel,
+    as: 'versions',
+  },
+];
+
+const toMetadata = (document: DocumentModel): DocumentMetadata => ({
+  title: document.title,
+  type: document.type,
+  category: document.category ?? undefined,
+  owner: document.owner,
+  department: document.department ?? undefined,
+  tags: document.tags ?? [],
+  status: document.status,
+});
+
+const toVersion = (version: DocumentVersionModel): DocumentVersionAttributes => {
+  const plain = version.get({ plain: true }) as DocumentVersionAttributes;
+  return plain;
+};
+
+export const toManagedDocument = (document: DocumentModel): ManagedDocument => {
+  const versionModels =
+    document.versions ?? (document.get('versions') as DocumentVersionModel[] | undefined) ?? [];
+  const versions = versionModels.map(toVersion);
+  return {
+    id: document.id,
+    metadata: toMetadata(document),
+    versions,
+    currentVersion: document.currentVersion,
+    isLocked: document.isLocked,
+    lockOwner: document.lockOwner ?? undefined,
+    favoriteBy: document.favoriteBy ?? [],
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+  };
+};
+
 export const createDocument = async (
   input: CreateDocumentInput,
   createdBy: string,
 ): Promise<ManagedDocument> => {
-  const document = await DocumentModel.create({
-    metadata: {
-      title: input.title,
-      type: input.type,
-      category: input.category,
-      owner: input.owner,
-      department: input.department,
-      tags: input.tags ?? [],
-      status: input.status ?? 'draft',
-    },
-    versions: [
+  const documentId = await sequelize.transaction(async (transaction) => {
+    const document = await DocumentModel.create(
       {
+        title: input.title,
+        type: input.type,
+        category: input.category,
+        owner: input.owner,
+        department: input.department,
+        tags: input.tags ?? [],
+        status: input.status ?? 'draft',
+        currentVersion: 1,
+      },
+      { transaction },
+    );
+
+    await DocumentVersionModel.create(
+      {
+        documentId: document.id,
         versionNumber: 1,
         filename: input.filename,
         storageKey: input.storageKey,
+        fileUrl: getFilePublicUrl(input.storageKey),
         mimeType: input.mimeType,
         createdBy,
         checksum: input.checksum,
         size: input.size,
-        createdAt: new Date(),
       },
-    ],
-    currentVersion: 1,
+      { transaction },
+    );
+
+    logger.info({ documentId: document.id }, 'Document created');
+    return document.id;
   });
 
-  logger.info({ documentId: document.id }, 'Document created');
+  const document = await findDocumentById(documentId);
+
   await recordAuditLog({
     entityType: 'document',
     entityId: document.id,
@@ -64,19 +121,31 @@ export const createDocument = async (
     documentId: document.id,
     event: 'created',
   });
+
   return document;
 };
 
-export const listDocuments = async () => {
-  return DocumentModel.find().lean();
+export const listDocuments = async (): Promise<ManagedDocument[]> => {
+  const documents = await DocumentModel.findAll({
+    include: documentInclude,
+    order: [
+      ['updatedAt', 'DESC'],
+      [{ model: DocumentVersionModel, as: 'versions' }, 'versionNumber', 'ASC'],
+    ],
+  });
+
+  return documents.map(toManagedDocument);
 };
 
-export const findDocumentById = async (id: string) => {
-  const document = await DocumentModel.findById(id);
+export const findDocumentById = async (id: string): Promise<ManagedDocument> => {
+  const document = await DocumentModel.findByPk(id, {
+    include: documentInclude,
+    order: [[{ model: DocumentVersionModel, as: 'versions' }, 'versionNumber', 'ASC']],
+  });
   if (!document) {
     throw new NotFoundError('Document not found');
   }
-  return document;
+  return toManagedDocument(document);
 };
 
 export const updateDocumentMetadata = async (
@@ -84,13 +153,16 @@ export const updateDocumentMetadata = async (
   input: UpdateDocumentMetadataInput,
   updatedBy: string,
 ): Promise<ManagedDocument> => {
-  const document = await findDocumentById(id);
+  const document = await DocumentModel.findByPk(id);
+  if (!document) {
+    throw new NotFoundError('Document not found');
+  }
 
-  if (input.title) document.metadata.title = input.title;
-  if (input.category) document.metadata.category = input.category;
-  if (input.department) document.metadata.department = input.department;
-  if (input.tags) document.metadata.tags = input.tags;
-  if (input.status) document.metadata.status = input.status;
+  if (input.title !== undefined) document.title = input.title;
+  if (input.category !== undefined) document.category = input.category;
+  if (input.department !== undefined) document.department = input.department;
+  if (input.tags !== undefined) document.tags = input.tags;
+  if (input.status !== undefined) document.status = input.status;
 
   await document.save();
   logger.info({ documentId: document.id }, 'Document metadata updated');
@@ -113,26 +185,37 @@ export const updateDocumentMetadata = async (
     event: 'metadata-updated',
   });
 
-  return document;
+  return findDocumentById(document.id);
 };
 
-export const addDocumentVersion = async (input: AddDocumentVersionInput) => {
-  const document = await findDocumentById(input.documentId);
+export const addDocumentVersion = async (input: AddDocumentVersionInput): Promise<ManagedDocument> => {
+  const document = await DocumentModel.findByPk(input.documentId);
+  if (!document) {
+    throw new NotFoundError('Document not found');
+  }
 
   const nextVersion = document.currentVersion + 1;
-  document.versions.push({
-    versionNumber: nextVersion,
-    filename: input.filename,
-    storageKey: input.storageKey,
-    mimeType: input.mimeType,
-    createdAt: new Date(),
-    createdBy: input.createdBy,
-    checksum: input.checksum,
-    size: input.size,
-  });
-  document.currentVersion = nextVersion;
 
-  await document.save();
+  await sequelize.transaction(async (transaction) => {
+    document.currentVersion = nextVersion;
+    await document.save({ transaction });
+
+    await DocumentVersionModel.create(
+      {
+        documentId: document.id,
+        versionNumber: nextVersion,
+        filename: input.filename,
+        storageKey: input.storageKey,
+        fileUrl: getFilePublicUrl(input.storageKey),
+        mimeType: input.mimeType,
+        createdBy: input.createdBy,
+        checksum: input.checksum,
+        size: input.size,
+      },
+      { transaction },
+    );
+  });
+
   logger.info({ documentId: document.id, version: nextVersion }, 'New document version added');
   await recordAuditLog({
     entityType: 'document',
@@ -156,24 +239,31 @@ export const addDocumentVersion = async (input: AddDocumentVersionInput) => {
     version: nextVersion,
   });
 
-  return document;
+  return findDocumentById(document.id);
 };
 
 export const getDocumentVersionMetadata = async (documentId: string, versionNumber?: number) => {
-  const document = await findDocumentById(documentId);
+  const document = await DocumentModel.findByPk(documentId, {
+    include: documentInclude,
+    order: [[{ model: DocumentVersionModel, as: 'versions' }, 'versionNumber', 'ASC']],
+  });
+  if (!document) {
+    throw new NotFoundError('Document not found');
+  }
 
+  const versions = (document.get('versions') as DocumentVersionModel[] | undefined) ?? [];
   const resolvedVersion =
     versionNumber !== undefined
-      ? document.versions.find((version) => version.versionNumber === versionNumber)
-      : document.versions.find((version) => version.versionNumber === document.currentVersion);
+      ? versions.find((version) => version.versionNumber === versionNumber)
+      : versions.find((version) => version.versionNumber === document.currentVersion);
 
   if (!resolvedVersion) {
     throw new NotFoundError('Document version not found');
   }
 
   return {
-    document,
-    version: resolvedVersion,
+    document: toManagedDocument(document),
+    version: toVersion(resolvedVersion),
   };
 };
 

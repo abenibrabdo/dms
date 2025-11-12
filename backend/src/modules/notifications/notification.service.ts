@@ -30,20 +30,23 @@ export const createNotification = async (input: CreateNotificationInput) => {
     recipient: notification.recipient,
     notificationId: notification.id,
   });
-  return notification;
+  return notification.get({ plain: true });
 };
 
 export const listNotifications = async (recipient: string) => {
-  return NotificationModel.find({ recipient }).sort({ createdAt: -1 }).lean();
+  const notifications = await NotificationModel.findAll({
+    where: { recipient },
+    order: [['createdAt', 'DESC']],
+  });
+  return notifications.map((item) => item.get({ plain: true }));
 };
 
 export const markNotificationAsRead = async (notificationId: string, userId: string) => {
-  const notification = await NotificationModel.findByIdAndUpdate(
-    notificationId,
-    { status: 'read' },
-    { new: true },
-  ).lean();
+  const notification = await NotificationModel.findByPk(notificationId);
   if (notification) {
+    notification.status = 'read';
+    await notification.save();
+
     await recordAuditLog({
       entityType: 'notification',
       entityId: notificationId,
@@ -58,6 +61,6 @@ export const markNotificationAsRead = async (notificationId: string, userId: str
     recipient: userId,
     notificationId,
   });
-  return notification;
+  return notification?.get({ plain: true }) ?? null;
 };
 

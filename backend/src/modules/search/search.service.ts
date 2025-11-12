@@ -1,4 +1,7 @@
-import { DocumentModel } from '@modules/documents/document.model.js';
+import { Op, type WhereOptions } from 'sequelize';
+
+import { DocumentModel, DocumentVersionModel } from '@modules/documents/document.model.js';
+import { toManagedDocument } from '@modules/documents/document.service.js';
 
 interface SearchFilters {
   q: string;
@@ -9,31 +12,48 @@ interface SearchFilters {
 }
 
 export const searchDocuments = async (filters: SearchFilters) => {
-  const query: Record<string, unknown> = {};
-
-  if (filters.q) {
-    query.$text = { $search: filters.q };
-  }
+  const where: WhereOptions = {};
 
   if (filters.owner) {
-    query['metadata.owner'] = filters.owner;
+    Object.assign(where, { owner: filters.owner });
   }
 
   if (filters.type) {
-    query['metadata.type'] = filters.type;
+    Object.assign(where, { type: filters.type });
   }
 
   if (filters.status) {
-    query['metadata.status'] = filters.status;
+    Object.assign(where, { status: filters.status });
   }
 
-  const projection = filters.q ? { score: { $meta: 'textScore' } } : {};
+  if (filters.q) {
+    const pattern = `%${filters.q}%`;
+    Object.assign(where, {
+      [Op.or]: [
+        { title: { [Op.like]: pattern } },
+        { type: { [Op.like]: pattern } },
+        { category: { [Op.like]: pattern } },
+        { owner: { [Op.like]: pattern } },
+        { department: { [Op.like]: pattern } },
+      ],
+    });
+  }
 
-  const documents = await DocumentModel.find(query, projection)
-    .sort(filters.q ? { score: { $meta: 'textScore' } } : { updatedAt: -1 })
-    .limit(filters.limit)
-    .lean();
+  const documents = await DocumentModel.findAll({
+    where,
+    include: [
+      {
+        model: DocumentVersionModel,
+        as: 'versions',
+      },
+    ],
+    order: [
+      ['updatedAt', 'DESC'],
+      [{ model: DocumentVersionModel, as: 'versions' }, 'versionNumber', 'ASC'],
+    ],
+    limit: filters.limit,
+  });
 
-  return documents;
+  return documents.map(toManagedDocument);
 };
 

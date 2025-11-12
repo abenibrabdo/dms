@@ -10,7 +10,8 @@ import { UserModel } from '@modules/auth/auth.model.js';
 const main = async () => {
   await connectDatabase();
 
-  const existing = await UserModel.findOne({ email: env.adminSeed.email });
+  const adminEmail = env.adminSeed.email.toLowerCase();
+  const existing = await UserModel.findOne({ where: { email: adminEmail } });
   if (existing) {
     logger.info(
       { email: env.adminSeed.email },
@@ -21,7 +22,7 @@ const main = async () => {
 
   const hashedPassword = await hashPassword(env.adminSeed.password);
   await UserModel.create({
-    email: env.adminSeed.email,
+    email: adminEmail,
     password: hashedPassword,
     firstName: env.adminSeed.firstName,
     lastName: env.adminSeed.lastName,

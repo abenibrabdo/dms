@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends Request {
     roles: string[];
     permissions?: string[];
   };
+  locale?: string;
 }
 
 export const authenticate = (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {

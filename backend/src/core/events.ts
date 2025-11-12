@@ -5,6 +5,7 @@ export const RealtimeChannels = {
   NOTIFICATION_CREATED: 'notifications.created',
   NOTIFICATION_READ: 'notifications.read',
   COMMENT_ADDED: 'documents.comment.added',
+  DOCUMENT_PRESENCE_UPDATED: 'documents.presence.updated',
 } as const;
 
 export type RealtimeChannel = (typeof RealtimeChannels)[keyof typeof RealtimeChannels];

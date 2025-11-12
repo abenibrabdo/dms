@@ -1,35 +1,83 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { DataTypes, Model, type Optional } from 'sequelize';
 
-export interface AuditLogDocument extends Document {
-  entityType: 'document' | 'workflow' | 'user' | 'notification' | 'system';
+import { sequelize } from '@core/database.js';
+
+export type AuditEntityType = 'document' | 'workflow' | 'user' | 'notification' | 'system';
+
+export interface AuditLogAttributes {
+  id: string;
+  entityType: AuditEntityType;
   entityId: string;
   action: string;
   performedBy: string;
-  performedByName?: string;
-  metadata?: Record<string, unknown>;
+  performedByName?: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-const AuditLogSchema = new Schema<AuditLogDocument>(
+export type AuditLogCreationAttributes = Optional<
+  AuditLogAttributes,
+  'id' | 'performedByName' | 'metadata' | 'createdAt' | 'updatedAt'
+>;
+
+export class AuditLogModel
+  extends Model<AuditLogAttributes, AuditLogCreationAttributes>
+  implements AuditLogAttributes
+{
+  declare id: string;
+  declare entityType: AuditEntityType;
+  declare entityId: string;
+  declare action: string;
+  declare performedBy: string;
+  declare performedByName: string | null;
+  declare metadata: Record<string, unknown> | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+}
+
+AuditLogModel.init(
   {
-    entityType: {
-      type: String,
-      enum: ['document', 'workflow', 'user', 'notification', 'system'],
-      required: true,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    entityId: { type: String, required: true, index: true },
-    action: { type: String, required: true, index: true },
-    performedBy: { type: String, required: true },
-    performedByName: { type: String },
-    metadata: { type: Schema.Types.Mixed },
+    entityType: {
+      type: DataTypes.ENUM('document', 'workflow', 'user', 'notification', 'system'),
+      allowNull: false,
+    },
+    entityId: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    action: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    performedBy: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    performedByName: {
+      type: DataTypes.STRING(191),
+      allowNull: true,
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
   },
   {
-    timestamps: { createdAt: true, updatedAt: false },
+    sequelize,
+    tableName: 'audit_logs',
+    timestamps: true,
+    updatedAt: false,
+    indexes: [
+      { fields: ['entityType', 'entityId', 'createdAt'] },
+      { fields: ['performedBy', 'createdAt'] },
+      { fields: ['action'] },
+    ],
   },
 );
-
-AuditLogSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
-AuditLogSchema.index({ performedBy: 1, createdAt: -1 });
-
-export const AuditLogModel: Model<AuditLogDocument> = model<AuditLogDocument>('AuditLog', AuditLogSchema);
 

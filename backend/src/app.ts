@@ -9,6 +9,7 @@ import { env } from '@config/index.js';
 import { logger } from '@core/logger.js';
 import { errorHandler } from '@middlewares/error-handler.js';
 import { apiRateLimiter } from '@middlewares/rate-limit.js';
+import { localeResolver } from '@middlewares/locale.js';
 import { requestContext } from '@middlewares/request-context.js';
 import { notFoundHandler } from '@middlewares/not-found.js';
 import { apiRouter } from '@routes/index.js';
@@ -18,6 +19,7 @@ export const createApp = () => {
   app.disable('x-powered-by');
 
   app.use(requestContext);
+  app.use(localeResolver);
 
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
@@ -51,6 +53,8 @@ export const createApp = () => {
       }),
     );
   }
+
+  app.use('/uploads', express.static(env.uploadDir));
 
   app.get('/health', (_req, res) => {
     res.status(200).json({

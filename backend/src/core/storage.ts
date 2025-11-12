@@ -17,6 +17,11 @@ export const getStoragePath = (storageKey: string) => {
   return path.join(env.uploadDir, storageKey);
 };
 
+export const getFilePublicUrl = (storageKey: string) => {
+  const safeKey = storageKey.replace(/\\/g, '/');
+  return `/uploads/${encodeURIComponent(safeKey)}`;
+};
+
 export const getFileStream = async (storageKey: string) => {
   const filePath = getStoragePath(storageKey);
   try {

@@ -1,11 +1,14 @@
-import { model, Schema, type Document, type Model } from 'mongoose';
+import { DataTypes, Model, type Optional } from 'sequelize';
 
-export interface UserDocument extends Document {
+import { sequelize } from '@core/database.js';
+
+export interface UserAttributes {
+  id: string;
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-  department?: string;
+  department?: string | null;
   roles: string[];
   permissions: string[];
   isMfaEnabled: boolean;
@@ -13,21 +16,78 @@ export interface UserDocument extends Document {
   updatedAt: Date;
 }
 
-const UserSchema = new Schema<UserDocument>(
+export type UserCreationAttributes = Optional<
+  UserAttributes,
+  'id' | 'roles' | 'permissions' | 'department' | 'isMfaEnabled' | 'createdAt' | 'updatedAt'
+>;
+
+export class UserModel extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+  declare id: string;
+  declare email: string;
+  declare password: string;
+  declare firstName: string;
+  declare lastName: string;
+  declare department: string | null;
+  declare roles: string[];
+  declare permissions: string[];
+  declare isMfaEnabled: boolean;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+}
+
+UserModel.init(
   {
-    email: { type: String, unique: true, required: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    department: { type: String },
-    roles: { type: [String], default: ['user'] },
-    permissions: { type: [String], default: [] },
-    isMfaEnabled: { type: Boolean, default: false },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    email: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    department: {
+      type: DataTypes.STRING(191),
+      allowNull: true,
+    },
+    roles: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: ['user'],
+    },
+    permissions: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    isMfaEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
-    timestamps: true,
+    sequelize,
+    tableName: 'users',
+    indexes: [
+      {
+        unique: true,
+        fields: ['email'],
+      },
+    ],
   },
 );
-
-export const UserModel: Model<UserDocument> = model<UserDocument>('User', UserSchema);
 

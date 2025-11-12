@@ -1,72 +1,256 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { DataTypes, Model, type Optional } from 'sequelize';
 
-export interface DocumentVersion {
-  versionNumber: number;
-  filename: string;
-  storageKey: string;
-  mimeType?: string;
-  createdAt: Date;
-  createdBy: string;
-  checksum?: string;
-  size?: number;
-}
+import { sequelize } from '@core/database.js';
 
 export interface DocumentMetadata {
   title: string;
   type: string;
-  category?: string;
+  category?: string | null;
   owner: string;
-  department?: string;
+  department?: string | null;
   tags: string[];
   status: 'draft' | 'in-review' | 'approved' | 'archived';
 }
 
-export interface ManagedDocument extends Document {
-  metadata: DocumentMetadata;
-  versions: DocumentVersion[];
+export interface DocumentAttributes {
+  id: string;
+  title: string;
+  type: string;
+  category?: string | null;
+  owner: string;
+  department?: string | null;
+  tags: string[];
+  status: 'draft' | 'in-review' | 'approved' | 'archived';
   currentVersion: number;
   isLocked: boolean;
-  lockOwner?: string;
+  lockOwner?: string | null;
   favoriteBy: string[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-const VersionSchema = new Schema<DocumentVersion>(
-  {
-    versionNumber: { type: Number, required: true },
-    filename: { type: String, required: true },
-    storageKey: { type: String, required: true },
-    mimeType: { type: String },
-    createdAt: { type: Date, default: Date.now },
-    createdBy: { type: String, required: true },
-    checksum: { type: String },
-    size: { type: Number },
-  },
-  { _id: false },
-);
+export type DocumentCreationAttributes = Optional<
+  DocumentAttributes,
+  | 'id'
+  | 'category'
+  | 'department'
+  | 'tags'
+  | 'status'
+  | 'currentVersion'
+  | 'isLocked'
+  | 'lockOwner'
+  | 'favoriteBy'
+  | 'createdAt'
+  | 'updatedAt'
+>;
 
-const DocumentSchema = new Schema<ManagedDocument>(
+export interface DocumentVersionAttributes {
+  id: string;
+  documentId: string;
+  versionNumber: number;
+  filename: string;
+  storageKey: string;
+  fileUrl: string;
+  mimeType?: string | null;
+  createdBy: string;
+  checksum?: string | null;
+  size?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type DocumentVersionCreationAttributes = Optional<
+  DocumentVersionAttributes,
+  'id' | 'mimeType' | 'checksum' | 'size' | 'createdAt' | 'updatedAt'
+>;
+
+export class DocumentModel
+  extends Model<DocumentAttributes, DocumentCreationAttributes>
+  implements DocumentAttributes
+{
+  declare id: string;
+  declare title: string;
+  declare type: string;
+  declare category: string | null;
+  declare owner: string;
+  declare department: string | null;
+  declare tags: string[];
+  declare status: 'draft' | 'in-review' | 'approved' | 'archived';
+  declare currentVersion: number;
+  declare isLocked: boolean;
+  declare lockOwner: string | null;
+  declare favoriteBy: string[];
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+  declare versions?: DocumentVersionModel[];
+}
+
+export class DocumentVersionModel
+  extends Model<DocumentVersionAttributes, DocumentVersionCreationAttributes>
+  implements DocumentVersionAttributes
+{
+  declare id: string;
+  declare documentId: string;
+  declare versionNumber: number;
+  declare filename: string;
+  declare storageKey: string;
+  declare fileUrl: string;
+  declare mimeType: string | null;
+  declare createdBy: string;
+  declare checksum: string | null;
+  declare size: number | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+  declare document?: DocumentModel;
+}
+
+DocumentModel.init(
   {
-    metadata: {
-      title: { type: String, required: true },
-      type: { type: String, required: true },
-      category: { type: String },
-      owner: { type: String, required: true },
-      department: { type: String },
-      tags: { type: [String], default: [] },
-      status: { type: String, enum: ['draft', 'in-review', 'approved', 'archived'], default: 'draft' },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    versions: { type: [VersionSchema], default: [] },
-    currentVersion: { type: Number, default: 0 },
-    isLocked: { type: Boolean, default: false },
-    lockOwner: { type: String },
-    favoriteBy: { type: [String], default: [] },
+    title: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    category: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    owner: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    department: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    status: {
+      type: DataTypes.ENUM('draft', 'in-review', 'approved', 'archived'),
+      allowNull: false,
+      defaultValue: 'draft',
+    },
+    currentVersion: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    isLocked: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    lockOwner: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    favoriteBy: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
   },
-  { timestamps: true },
+  {
+    sequelize,
+    tableName: 'documents',
+    timestamps: true,
+    indexes: [
+      { fields: ['title'] },
+      { fields: ['owner'] },
+      { fields: ['status'] },
+    ],
+  },
 );
 
-DocumentSchema.index({ 'metadata.title': 'text', 'metadata.tags': 'text' });
+DocumentVersionModel.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    documentId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    versionNumber: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+    },
+    filename: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    storageKey: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    fileUrl: {
+      type: DataTypes.STRING(512),
+      allowNull: false,
+    },
+    mimeType: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    createdBy: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    checksum: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    size: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'document_versions',
+    timestamps: true,
+    indexes: [
+      { fields: ['documentId', 'versionNumber'], unique: true },
+      { fields: ['createdBy'] },
+    ],
+  },
+);
 
-export const DocumentModel: Model<ManagedDocument> = model<ManagedDocument>('Document', DocumentSchema);
+DocumentModel.hasMany(DocumentVersionModel, {
+  as: 'versions',
+  foreignKey: 'documentId',
+  sourceKey: 'id',
+  onDelete: 'CASCADE',
+});
+
+DocumentVersionModel.belongsTo(DocumentModel, {
+  as: 'document',
+  foreignKey: 'documentId',
+  targetKey: 'id',
+});
+
+export interface ManagedDocument {
+  id: string;
+  metadata: DocumentMetadata;
+  versions: DocumentVersionAttributes[];
+  currentVersion: number;
+  isLocked: boolean;
+  lockOwner?: string | null;
+  favoriteBy: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 

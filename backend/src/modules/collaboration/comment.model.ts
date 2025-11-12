@@ -1,6 +1,9 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { DataTypes, Model, type Optional } from 'sequelize';
 
-export interface CommentDocument extends Document {
+import { sequelize } from '@core/database.js';
+
+export interface CommentAttributes {
+  id: string;
   documentId: string;
   authorId: string;
   authorName: string;
@@ -10,16 +13,56 @@ export interface CommentDocument extends Document {
   updatedAt: Date;
 }
 
-const CommentSchema = new Schema<CommentDocument>(
-  {
-    documentId: { type: String, required: true, index: true },
-    authorId: { type: String, required: true },
-    authorName: { type: String, required: true },
-    message: { type: String, required: true },
-    mentions: { type: [String], default: [] },
-  },
-  { timestamps: true },
-);
+export type CommentCreationAttributes = Optional<
+  CommentAttributes,
+  'id' | 'mentions' | 'createdAt' | 'updatedAt'
+>;
 
-export const CommentModel: Model<CommentDocument> = model<CommentDocument>('Comment', CommentSchema);
+export class CommentModel extends Model<CommentAttributes, CommentCreationAttributes> implements CommentAttributes {
+  declare id: string;
+  declare documentId: string;
+  declare authorId: string;
+  declare authorName: string;
+  declare message: string;
+  declare mentions: string[];
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+}
+
+CommentModel.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    documentId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    authorId: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    authorName: {
+      type: DataTypes.STRING(191),
+      allowNull: false,
+    },
+    message: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    mentions: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+  },
+  {
+    sequelize,
+    tableName: 'comments',
+    timestamps: true,
+    indexes: [{ fields: ['documentId', 'createdAt'] }],
+  },
+);
 

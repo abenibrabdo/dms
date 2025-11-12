@@ -2,13 +2,21 @@ import { Router } from 'express';
 
 import { authenticate } from '@middlewares/auth.js';
 
-import { getAnalyticsSummaryHandler } from './analytics.controller.js';
+import {
+  getActivityTrendHandler,
+  getAnalyticsSummaryHandler,
+  getStorageMetricsHandler,
+  getUserActivityLeaderboardHandler,
+} from './analytics.controller.js';
 
 const router = Router();
 
 router.use(authenticate);
 
 router.get('/summary', getAnalyticsSummaryHandler);
+router.get('/storage', getStorageMetricsHandler);
+router.get('/activity/trend', getActivityTrendHandler);
+router.get('/activity/leaderboard', getUserActivityLeaderboardHandler);
 
 export const analyticsRouter = router;
 

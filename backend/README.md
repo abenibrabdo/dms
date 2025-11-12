@@ -17,13 +17,16 @@
 - `documents`: document CRUD, versioning, metadata, storage orchestration, uploads/downloads, OCR hooks.
 - `workflows`: approval pipelines, tasks, notifications, audit logs.
 - `collaboration`: comments feed, document locking controls, realtime hooks foundation.
-- `search`: MongoDB text search façade with multi-filter support and future space for external engines.
-- `analytics`: metrics aggregation, dashboard summaries, future audit/reporting feeds.
+- `search`: SQL-backed metadata search with multi-filter support and future space for external engines.
+- `analytics`: metrics aggregation, dashboard summaries, export-friendly insights.
 - `audit`: tamper-evident action logging for compliance and forensic analysis.
+- `localization`: translation resources for Amharic/Oromo/English with admin-managed bundles.
+- `sync`: offline/mobile snapshot API for incremental document/workflow/comment retrieval.
 
 ### Cross-Cutting Concerns
 - **Security**: Helmet, dynamic CORS allow-list, global rate limiting, request correlation IDs, JWT/refresh + optional 2FA roadmap, AES encryption helper placeholders.
-- **Storage**: GridFS/MongoDB for binary files; abstracted repository interface for future S3/MinIO integration.
+- **Database**: MySQL via Sequelize ORM with declarative domain models, migrations roadmap, and transaction support.
+- **Storage**: Local disk storage (configurable) with an abstraction layer ready for S3/MinIO integration.
 - **Messaging**: In-process event emitter initially; easy migration path to RabbitMQ; Socket.IO for real-time updates.
 - **Realtime**: Socket.IO gateway broadcasting document/workflow/notification events, with RabbitMQ placeholders for downstream consumers.
 - **Validation**: Centralized schemas via Joi; custom middleware for request validation.
@@ -31,6 +34,8 @@
 - **Audit Trail**: Every document/workflow/notification mutation is persisted to `AuditLog` with `/api/audit` access.
 
 - **File Handling**: Multer-powered streaming uploads to disk (pluggable storage), resumable/chunked upload roadmap, secure download streaming.
+- **Localization**: Locale negotiation middleware resolves `req.locale`; `/api/localization` serves and manages translation resources.
+- **Offline Sync**: `/api/sync` endpoint delivers incremental updates for mobile and offline clients.
 
 ### Security Hardening
 - `CORS_ORIGINS` environment variable controls allowed origins (comma-separated, `*` permitted for dev).
@@ -45,12 +50,14 @@
   - `documents.updated` – emitted on creation, metadata changes, lock/unlock.
   - `documents.version.added` – emitted when new revisions arrive.
   - `documents.comment.added` – emitted when collaboration comments are posted.
+  - `documents.presence.updated` – emitted as collaborators join, leave, or heartbeat presence.
   - `workflows.updated` – emitted on creation/approval/rejection/reassign.
   - `notifications.created` / `notifications.read` – emitted for alert lifecycle.
 - Queue placeholders publish matching routing keys for future RabbitMQ consumption.
 - Append new versions with `POST /api/documents/:id/versions/upload`.
 - Download latest versions through `GET /api/documents/:id/download`, or specific revisions via `GET /api/documents/:id/versions/:version/download`.
-- Storage abstraction (`core/storage.ts`) prepares for S3/GridFS integration; current default stores files under `storage/uploads`.
+- Storage abstraction (`core/storage.ts`) prepares for S3/MinIO integration; current default stores files under `storage/uploads`.
+- Uploaded files are served from `/uploads/<filename>` and each document version stores the public URL alongside its storage key.
 - Enforce `editor`/`admin` roles for upload endpoints; downloads require authenticated access.
 
 ### Admin Seeding
@@ -60,6 +67,14 @@
   - `ADMIN_SEED_FIRST_NAME` / `ADMIN_SEED_LAST_NAME` / `ADMIN_SEED_DEPARTMENT`
 - Run `npm run seed:admin` to create the initial administrator (idempotent; skips if user exists).
 - Seed flow uses the same hashing pipeline as runtime auth, ensuring consistency.
+
+### Database Configuration
+- Set the MySQL connection details via the following environment variables:
+  - `DB_HOST` / `DB_PORT`
+  - `DB_USER` / `DB_PASSWORD`
+  - `DB_NAME`
+  - Optional toggles: `DB_LOGGING` (`true` to enable SQL logging) and `DB_SYNC` (`false` to skip auto-sync; use migrations instead).
+- Sequelize models auto-sync on startup by default; switch off in production once migrations are in place.
 
 ### Audit Trail Usage
 - `POST` handlers internally call `recordAuditLog` to persist who did what, when, and optional metadata.

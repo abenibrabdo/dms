@@ -3,11 +3,14 @@ import { logger } from '@core/logger.js';
 import { hashPassword, verifyPassword } from '@utils/password.js';
 import { signAccessToken, signRefreshToken } from '@utils/jwt.js';
 
-import { UserModel, type UserDocument } from './auth.model.js';
+import { UserModel, type UserAttributes } from './auth.model.js';
 import type { CreateUserInput, LoginInput } from './auth.types.js';
 
-export const registerUser = async (input: CreateUserInput): Promise<UserDocument> => {
-  const existing = await UserModel.findOne({ email: input.email });
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+export const registerUser = async (input: CreateUserInput): Promise<UserAttributes> => {
+  const email = normalizeEmail(input.email);
+  const existing = await UserModel.findOne({ where: { email } });
   if (existing) {
     throw new AppError('Email already registered', 409);
   }
@@ -16,17 +19,19 @@ export const registerUser = async (input: CreateUserInput): Promise<UserDocument
 
   const user = await UserModel.create({
     ...input,
+    email,
     password: hashedPassword,
     roles: input.roles ?? ['user'],
     permissions: input.permissions ?? [],
   });
 
   logger.info({ userId: user.id }, 'User registered');
-  return user;
+  return user.get({ plain: true });
 };
 
 export const authenticateUser = async (input: LoginInput) => {
-  const user = await UserModel.findOne({ email: input.email });
+  const email = normalizeEmail(input.email);
+  const user = await UserModel.findOne({ where: { email } });
   if (!user) {
     throw new AuthenticationError('Invalid credentials');
   }
@@ -44,12 +49,17 @@ export const authenticateUser = async (input: LoginInput) => {
   const refreshToken = signRefreshToken({ sub: user.id });
 
   return {
-    user,
+    user: user.get({ plain: true }),
     tokens: { accessToken, refreshToken },
   };
 };
 
 export const listUsers = async () => {
-  return UserModel.find().select('-password').lean();
+  const users = await UserModel.findAll({
+    attributes: { exclude: ['password'] },
+    order: [['createdAt', 'DESC']],
+  });
+
+  return users.map((user) => user.get({ plain: true }));
 };
 

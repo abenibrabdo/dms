@@ -1,7 +1,5 @@
-import { AuditLogModel } from './audit.model.js';
-
 interface AuditLogInput {
-  entityType: 'document' | 'workflow' | 'user' | 'notification' | 'system';
+  entityType: AuditEntityType;
   entityId: string;
   action: string;
   performedBy: string;
@@ -28,20 +26,32 @@ export const recordAuditLog = async (input: AuditLogInput) => {
 };
 
 export const listAuditLogs = async (filters: AuditFilters) => {
-  const query: Record<string, unknown> = {};
+  const where: WhereOptions = {};
 
   if (filters.entityType) {
-    query.entityType = filters.entityType;
+    Object.assign(where, { entityType: filters.entityType });
   }
+
   if (filters.entityId) {
-    query.entityId = filters.entityId;
+    Object.assign(where, { entityId: filters.entityId });
   }
+
   if (filters.performedBy) {
-    query.performedBy = filters.performedBy;
+    Object.assign(where, { performedBy: filters.performedBy });
   }
 
   const limit = filters.limit ?? 50;
 
-  return AuditLogModel.find(query).sort({ createdAt: -1 }).limit(limit).lean();
+  const logs = await AuditLogModel.findAll({
+    where,
+    order: [['createdAt', 'DESC']],
+    limit,
+  });
+
+  return logs.map((log) => log.get({ plain: true }));
 };
+
+import type { WhereOptions } from 'sequelize';
+
+import { AuditLogModel, type AuditEntityType } from './audit.model.js';
 

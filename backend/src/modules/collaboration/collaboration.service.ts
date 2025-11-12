@@ -6,12 +6,13 @@ import { publishMessage } from '@core/queue.js';
 import { broadcastEvent } from '@core/socket.js';
 import { recordAuditLog } from '@modules/audit/audit.service.js';
 import { DocumentModel } from '@modules/documents/document.model.js';
+import { findDocumentById } from '@modules/documents/document.service.js';
 
 import { CommentModel } from './comment.model.js';
 import type { CreateCommentInput, LockDocumentInput } from './collaboration.types.js';
 
 export const addComment = async (input: CreateCommentInput) => {
-  const document = await DocumentModel.findById(input.documentId);
+  const document = await DocumentModel.findByPk(input.documentId);
   if (!document) {
     throw new NotFoundError('Document not found for comment');
   }
@@ -51,15 +52,19 @@ export const addComment = async (input: CreateCommentInput) => {
     commentId: comment.id,
   });
 
-  return comment;
+  return comment.get({ plain: true });
 };
 
 export const listComments = async (documentId: string) => {
-  return CommentModel.find({ documentId }).sort({ createdAt: 1 }).lean();
+  const comments = await CommentModel.findAll({
+    where: { documentId },
+    order: [['createdAt', 'ASC']],
+  });
+  return comments.map((comment) => comment.get({ plain: true }));
 };
 
 export const lockDocument = async (input: LockDocumentInput, force = false) => {
-  const document = await DocumentModel.findById(input.documentId);
+  const document = await DocumentModel.findByPk(input.documentId);
   if (!document) {
     throw new NotFoundError('Document not found for locking');
   }
@@ -93,11 +98,11 @@ export const lockDocument = async (input: LockDocumentInput, force = false) => {
     event: 'locked',
     userId: input.userId,
   });
-  return document;
+  return findDocumentById(document.id);
 };
 
 export const unlockDocument = async (input: LockDocumentInput) => {
-  const document = await DocumentModel.findById(input.documentId);
+  const document = await DocumentModel.findByPk(input.documentId);
   if (!document) {
     throw new NotFoundError('Document not found for unlocking');
   }
@@ -107,7 +112,7 @@ export const unlockDocument = async (input: LockDocumentInput) => {
   }
 
   document.isLocked = false;
-  document.lockOwner = undefined;
+  document.lockOwner = null;
   await document.save();
 
   logger.info({ documentId: document.id, lockOwner: input.userId }, 'Document unlocked');
@@ -129,6 +134,6 @@ export const unlockDocument = async (input: LockDocumentInput) => {
     event: 'unlocked',
     userId: input.userId,
   });
-  return document;
+  return findDocumentById(document.id);
 };
 
