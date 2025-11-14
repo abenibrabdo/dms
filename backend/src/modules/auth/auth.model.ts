@@ -12,6 +12,8 @@ export interface UserAttributes {
   roles: string[];
   permissions: string[];
   isMfaEnabled: boolean;
+  mfaSecretEnc?: string | null;
+  mfaRecoveryCodes?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +33,8 @@ export class UserModel extends Model<UserAttributes, UserCreationAttributes> imp
   declare roles: string[];
   declare permissions: string[];
   declare isMfaEnabled: boolean;
+  declare mfaSecretEnc: string | null;
+  declare mfaRecoveryCodes: string[];
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
 }
@@ -77,6 +81,15 @@ UserModel.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    mfaSecretEnc: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    mfaRecoveryCodes: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
     },
   },
   {

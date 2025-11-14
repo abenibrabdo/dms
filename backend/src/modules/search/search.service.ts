@@ -26,8 +26,15 @@ export const searchDocuments = async (filters: SearchFilters) => {
     Object.assign(where, { status: filters.status });
   }
 
+  let matchedByContentIds: string[] = [];
   if (filters.q) {
     const pattern = `%${filters.q}%`;
+    const byVersions = await DocumentVersionModel.findAll({
+      attributes: ['documentId'],
+      where: { contentText: { [Op.like]: pattern } },
+      group: ['documentId'],
+    });
+    matchedByContentIds = byVersions.map((v) => v.documentId);
     Object.assign(where, {
       [Op.or]: [
         { title: { [Op.like]: pattern } },
@@ -35,6 +42,7 @@ export const searchDocuments = async (filters: SearchFilters) => {
         { category: { [Op.like]: pattern } },
         { owner: { [Op.like]: pattern } },
         { department: { [Op.like]: pattern } },
+        matchedByContentIds.length ? { id: { [Op.in]: matchedByContentIds } } : {},
       ],
     });
   }

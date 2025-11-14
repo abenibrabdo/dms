@@ -15,6 +15,7 @@ export const createDocumentSchema = Joi.object({
   size: Joi.number().optional(),
   checksum: Joi.string().optional(),
   mimeType: Joi.string().optional(),
+  contentText: Joi.string().optional(),
 });
 
 export const updateDocumentSchema = Joi.object({
@@ -31,5 +32,25 @@ export const addVersionSchema = Joi.object({
   checksum: Joi.string().optional(),
   size: Joi.number().optional(),
   mimeType: Joi.string().optional(),
+  contentText: Joi.string().optional(),
+});
+
+export const uploadInitSchema = Joi.object({
+  title: Joi.string().required(),
+  type: Joi.string().required(),
+  category: Joi.string().optional(),
+  owner: Joi.string().required(),
+  department: Joi.string().optional(),
+  tags: Joi.array().items(Joi.string()).default([]),
+  status: Joi.string().valid('draft', 'in-review', 'approved', 'archived').default('draft'),
+  filename: Joi.string().required(),
+  mimeType: Joi.string().optional(),
+  totalSize: Joi.number().min(1).required(),
+  chunkSize: Joi.number().min(1).required(),
+  checksum: Joi.string().optional(),
+});
+
+export const uploadFinalizeSchema = Joi.object({
+  checksum: Joi.string().optional(),
 });
 

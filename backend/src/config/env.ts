@@ -40,6 +40,11 @@ export const env = {
   enablePrettyLogs: process.env.PRETTY_LOGS === 'true',
   uploadDir: path.resolve(process.cwd(), process.env.UPLOAD_DIR ?? 'storage/uploads'),
   corsOrigins: parseList(process.env.CORS_ORIGINS, ['*']),
+  accessControls: {
+    allowedIps: parseList(process.env.ALLOWED_IPS),
+    blockedIps: parseList(process.env.BLOCKED_IPS),
+    allowedDeviceIds: parseList(process.env.ALLOWED_DEVICE_IDS),
+  },
   localization: {
     supportedLocales: parseList(process.env.SUPPORTED_LOCALES, ['en', 'am', 'om']),
     defaultLocale: process.env.DEFAULT_LOCALE ?? 'en',

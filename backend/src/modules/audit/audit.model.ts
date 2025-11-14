@@ -13,12 +13,11 @@ export interface AuditLogAttributes {
   performedByName?: string | null;
   metadata?: Record<string, unknown> | null;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export type AuditLogCreationAttributes = Optional<
   AuditLogAttributes,
-  'id' | 'performedByName' | 'metadata' | 'createdAt' | 'updatedAt'
+  'id' | 'performedByName' | 'metadata' | 'createdAt'
 >;
 
 export class AuditLogModel
@@ -33,7 +32,6 @@ export class AuditLogModel
   declare performedByName: string | null;
   declare metadata: Record<string, unknown> | null;
   declare readonly createdAt: Date;
-  declare readonly updatedAt: Date;
 }
 
 AuditLogModel.init(

@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { authenticate } from '@middlewares/auth.js';
 import { validate } from '@middlewares/validation.js';
+import { upload } from '@middlewares/upload.js';
 
 import {
   addCommentHandler,
@@ -31,7 +32,7 @@ router.use(authenticate);
 router
   .route('/:documentId/comments')
   .get(listCommentsHandler)
-  .post(validate(createCommentSchema), addCommentHandler);
+  .post(upload.array('files'), validate(createCommentSchema), addCommentHandler);
 
 router.post('/:documentId/lock', validate(lockDocumentSchema, 'body'), lockDocumentHandler);
 router.post('/:documentId/unlock', unlockDocumentHandler);

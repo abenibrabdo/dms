@@ -43,6 +43,7 @@ export const DocumentList = () => {
             <th className="px-4 py-3">Owner</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3">Updated</th>
+            <th className="px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
@@ -60,6 +61,14 @@ export const DocumentList = () => {
                 </span>
               </td>
               <td className="px-4 py-3 text-sm text-slate-500">{doc.updatedAt}</td>
+              <td className="px-4 py-3">
+                <a
+                  href={`/api/documents/${encodeURIComponent(doc.id)}/download`}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
+                >
+                  Download
+                </a>
+              </td>
             </tr>
           ))}
         </tbody>

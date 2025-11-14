@@ -4,7 +4,10 @@ import { logger } from './logger.js';
 import { Sequelize, type SequelizeOptions } from 'sequelize';
 
 import '@modules/auth/auth.model.js';
+import '@modules/auth/password-reset.model.js';
+import '@modules/auth/access-control.model.js';
 import '@modules/documents/document.model.js';
+import '@modules/documents/upload-session.model.js';
 import '@modules/workflows/workflow.model.js';
 import '@modules/collaboration/comment.model.js';
 import '@modules/collaboration/presence.model.js';

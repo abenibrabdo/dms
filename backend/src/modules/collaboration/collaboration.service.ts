@@ -23,6 +23,7 @@ export const addComment = async (input: CreateCommentInput) => {
     authorName: input.authorName,
     message: input.message,
     mentions: input.mentions ?? [],
+    attachments: input.attachments ?? [],
   });
 
   logger.info(

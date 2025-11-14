@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '@middlewares/auth.js';
+import { validate } from '@middlewares/validation.js';
+import { deleteLocalizationResourceHandler, getLocalizationResourcesHandler, upsertLocalizationResourcesHandler, } from './localization.controller.js';
+import { getLocalizationResourcesSchema, upsertLocalizationResourcesSchema, } from './localization.schema.js';
+const router = Router();
+router.use(authenticate);
+router.get('/resources', validate(getLocalizationResourcesSchema, 'query'), getLocalizationResourcesHandler);
+router.put('/resources', authorize(['admin']), validate(upsertLocalizationResourcesSchema, 'body'), upsertLocalizationResourcesHandler);
+router.delete('/resources/:namespace/:key/:language', authorize(['admin']), deleteLocalizationResourceHandler);
+export const localizationRouter = router;

@@ -55,13 +55,14 @@ export interface DocumentVersionAttributes {
   createdBy: string;
   checksum?: string | null;
   size?: number | null;
+  contentText?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type DocumentVersionCreationAttributes = Optional<
   DocumentVersionAttributes,
-  'id' | 'mimeType' | 'checksum' | 'size' | 'createdAt' | 'updatedAt'
+  'id' | 'mimeType' | 'checksum' | 'size' | 'contentText' | 'createdAt' | 'updatedAt'
 >;
 
 export class DocumentModel
@@ -214,6 +215,10 @@ DocumentVersionModel.init(
     },
     size: {
       type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+    contentText: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },

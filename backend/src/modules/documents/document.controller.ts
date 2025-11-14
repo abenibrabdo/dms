@@ -2,7 +2,7 @@ import type { Response } from 'express';
 
 import { pipeline } from 'node:stream/promises';
 
-import { getFileStream } from '@core/storage.js';
+import { getFileStream, getFileStat, getStoragePath } from '@core/storage.js';
 import { ValidationError } from '@core/errors.js';
 import type { AuthenticatedRequest } from '@middlewares/auth.js';
 
@@ -112,6 +112,7 @@ export const uploadDocumentHandler = async (req: AuthenticatedRequest, res: Resp
     req.user?.id ?? owner,
   );
 
+
   res.status(201).json({
     success: true,
     data: document,
@@ -135,6 +136,7 @@ export const uploadDocumentVersionHandler = async (req: AuthenticatedRequest, re
     createdBy: req.user?.id ?? 'system',
   });
 
+
   res.status(201).json({
     success: true,
     data: document,
@@ -144,11 +146,25 @@ export const uploadDocumentVersionHandler = async (req: AuthenticatedRequest, re
 export const downloadDocumentHandler = async (req: AuthenticatedRequest, res: Response) => {
   const { documentId } = req.params;
   const { version } = await getDocumentVersionMetadata(documentId);
-  const stream = await getFileStream(version.storageKey);
-
+  const stat = await getFileStat(version.storageKey);
+  const range = req.headers.range;
   res.setHeader('Content-Type', version.mimeType ?? 'application/octet-stream');
   res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(version.filename)}"`);
-
+  res.setHeader('Accept-Ranges', 'bytes');
+  if (range) {
+    const match = /bytes=(\d*)-(\d*)/.exec(range);
+    const start = match && match[1] ? parseInt(match[1], 10) : 0;
+    const end = match && match[2] ? parseInt(match[2], 10) : stat.size - 1;
+    const chunkSize = end - start + 1;
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+    res.setHeader('Content-Length', String(chunkSize));
+    const rs = (await import('node:fs')).createReadStream(stat.path, { start, end });
+    await pipeline(rs, res);
+    return;
+  }
+  res.setHeader('Content-Length', String(stat.size));
+  const stream = await (async () => (await import('node:fs')).createReadStream(stat.path))();
   await pipeline(stream, res);
 };
 
@@ -160,11 +176,27 @@ export const downloadDocumentVersionHandler = async (req: AuthenticatedRequest, 
   }
 
   const { version } = await getDocumentVersionMetadata(documentId, versionNum);
-  const stream = await getFileStream(version.storageKey);
-
+  const stat = await getFileStat(version.storageKey);
+  const range = req.headers.range;
   res.setHeader('Content-Type', version.mimeType ?? 'application/octet-stream');
   res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(version.filename)}"`);
-
+  res.setHeader('Accept-Ranges', 'bytes');
+  if (range) {
+    const match = /bytes=(\d*)-(\d*)/.exec(range);
+    const start = match && match[1] ? parseInt(match[1], 10) : 0;
+    const end = match && match[2] ? parseInt(match[2], 10) : stat.size - 1;
+    const chunkSize = end - start + 1;
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+    res.setHeader('Content-Length', String(chunkSize));
+    const rs = (await import('node:fs')).createReadStream(stat.path, { start, end });
+    await pipeline(rs, res);
+    return;
+  }
+  res.setHeader('Content-Length', String(stat.size));
+  const stream = await (async () => (await import('node:fs')).createReadStream(stat.path))();
   await pipeline(stream, res);
 };
+
+ 
 

@@ -16,6 +16,8 @@ import {
   uploadDocumentVersionHandler,
 } from './document.controller.js';
 import { addVersionSchema, createDocumentSchema, updateDocumentSchema } from './document.schema.js';
+import { uploadInitSchema, uploadFinalizeSchema } from './document.schema.js';
+import { initUploadSessionHandler, putUploadChunkHandler, finalizeUploadSessionHandler, abortUploadSessionHandler } from './upload-session.controller.js';
 
 const router = Router();
 
@@ -57,6 +59,30 @@ router.post(
 router.get(
   '/:documentId/versions/:versionNumber/download',
   downloadDocumentVersionHandler,
+);
+
+// Resumable uploads (local only)
+router.post(
+  '/uploads/init',
+  authorize(['editor', 'admin']),
+  validate(uploadInitSchema),
+  initUploadSessionHandler,
+);
+router.put(
+  '/uploads/:sessionId/chunks/:chunkNumber',
+  authorize(['editor', 'admin']),
+  putUploadChunkHandler,
+);
+router.post(
+  '/uploads/:sessionId/finalize',
+  authorize(['editor', 'admin']),
+  validate(uploadFinalizeSchema),
+  finalizeUploadSessionHandler,
+);
+router.delete(
+  '/uploads/:sessionId',
+  authorize(['editor', 'admin']),
+  abortUploadSessionHandler,
 );
 
 export const documentRouter = router;

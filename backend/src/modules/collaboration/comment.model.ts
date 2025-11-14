@@ -9,13 +9,20 @@ export interface CommentAttributes {
   authorName: string;
   message: string;
   mentions: string[];
+  attachments: Array<{
+    filename: string;
+    storageKey: string;
+    mimeType?: string | null;
+    size?: number | null;
+    fileUrl: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type CommentCreationAttributes = Optional<
   CommentAttributes,
-  'id' | 'mentions' | 'createdAt' | 'updatedAt'
+  'id' | 'mentions' | 'attachments' | 'createdAt' | 'updatedAt'
 >;
 
 export class CommentModel extends Model<CommentAttributes, CommentCreationAttributes> implements CommentAttributes {
@@ -53,6 +60,11 @@ CommentModel.init(
       allowNull: false,
     },
     mentions: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    attachments: {
       type: DataTypes.JSON,
       allowNull: false,
       defaultValue: [],

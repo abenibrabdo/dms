@@ -11,5 +11,19 @@ export interface CreateUserInput {
 export interface LoginInput {
   email: string;
   password: string;
+  mfaCode?: string;
+}
+
+export interface MfaVerifyInput {
+  code: string;
+}
+
+export interface RequestPasswordResetInput {
+  email: string;
+}
+
+export interface ConfirmPasswordResetInput {
+  token: string;
+  newPassword: string;
 }
 

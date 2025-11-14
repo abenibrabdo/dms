@@ -44,3 +44,14 @@ export const deleteFile = async (storageKey: string) => {
   }
 };
 
+export const getFileStat = async (storageKey: string) => {
+  const filePath = getStoragePath(storageKey);
+  try {
+    const stat = await fs.stat(filePath);
+    return { path: filePath, size: stat.size };
+  } catch {
+    throw new NotFoundError('Stored file not found');
+  }
+};
+
+

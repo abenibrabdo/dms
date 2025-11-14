@@ -90,6 +90,7 @@ export const createDocument = async (
         createdBy,
         checksum: input.checksum,
         size: input.size,
+        contentText: (input as any).contentText,
       },
       { transaction },
     );
@@ -211,6 +212,7 @@ export const addDocumentVersion = async (input: AddDocumentVersionInput): Promis
         createdBy: input.createdBy,
         checksum: input.checksum,
         size: input.size,
+        contentText: (input as any).contentText,
       },
       { transaction },
     );

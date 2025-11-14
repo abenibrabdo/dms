@@ -2,12 +2,9 @@ import type { Response } from 'express';
 
 import type { AuthenticatedRequest } from '@middlewares/auth.js';
 
-import {
-  addComment,
-  listComments,
-  lockDocument,
-  unlockDocument,
-} from './collaboration.service.js';
+import { addComment, listComments, lockDocument, unlockDocument } from './collaboration.service.js';
+import { upload } from '@middlewares/upload.js';
+import { getFilePublicUrl } from '@core/storage.js';
 
 export const listCommentsHandler = async (req: AuthenticatedRequest, res: Response) => {
   const comments = await listComments(req.params.documentId);
@@ -29,6 +26,15 @@ export const addCommentHandler = async (req: AuthenticatedRequest, res: Response
     mentions: req.body.mentions,
     authorId: user.id,
     authorName: `${req.body.authorName ?? ''}`.trim() || user.id,
+    attachments: Array.isArray((req as any).files)
+      ? ((req as any).files as Array<Express.Multer.File>).map((f) => ({
+          filename: f.originalname,
+          storageKey: f.filename,
+          mimeType: f.mimetype,
+          size: f.size,
+          fileUrl: getFilePublicUrl(f.filename),
+        }))
+      : [],
   });
 
   res.status(201).json({

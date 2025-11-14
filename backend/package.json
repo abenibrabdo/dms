@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "postbuild": "tscpaths -p tsconfig.json -s ./src -o ./dist",
+    "postbuild": "",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
@@ -31,6 +31,7 @@
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "uuid": "^9.0.1"
+    ,"otplib": "^12.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -48,7 +49,6 @@
     "eslint-plugin-import": "^2.29.1",
     "prettier": "^3.2.5",
     "ts-node": "^10.9.2",
-    "tscpaths": "^1.0.3",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.7.2",
     "typescript": "^5.4.2",
