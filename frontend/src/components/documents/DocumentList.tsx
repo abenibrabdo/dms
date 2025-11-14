@@ -1,4 +1,5 @@
 import { useDocuments } from '@hooks/useDocuments';
+import { Link } from 'react-router-dom';
 
 export const DocumentList = () => {
   const { data, isLoading, isError } = useDocuments();
@@ -50,7 +51,11 @@ export const DocumentList = () => {
           {documents.map((doc) => (
             <tr key={doc.id} className="hover:bg-slate-50">
               <td className="px-4 py-3">
-                <div className="font-medium text-slate-900">{doc.title}</div>
+                <div className="font-medium text-slate-900">
+                  <Link to={`/documents/${encodeURIComponent(doc.id)}`} className="hover:underline">
+                    {doc.title}
+                  </Link>
+                </div>
                 <div className="text-xs text-slate-500">{doc.id}</div>
               </td>
               <td className="px-4 py-3">{doc.type}</td>

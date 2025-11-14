@@ -2,6 +2,8 @@ import { Outlet, Route, Routes } from 'react-router-dom';
 
 import { SignInForm } from '@components/auth/SignInForm';
 import { SignUpForm } from '@components/auth/SignUpForm';
+import { PasswordResetRequest } from '@components/auth/PasswordResetRequest';
+import { PasswordResetConfirm } from '@components/auth/PasswordResetConfirm';
 
 const AuthLayout = () => {
   return (
@@ -20,6 +22,8 @@ export const AuthPage = () => {
       <Route element={<AuthLayout />}>
         <Route index element={<SignInForm />} />
         <Route path="register" element={<SignUpForm />} />
+        <Route path="reset" element={<PasswordResetRequest />} />
+        <Route path="reset/confirm" element={<PasswordResetConfirm />} />
       </Route>
     </Routes>
   );

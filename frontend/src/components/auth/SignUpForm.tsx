@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { apiClient } from '@services/apiClient';
+import { useAuthStore } from '@store/authStore';
+
 export const SignUpForm = () => {
   const navigate = useNavigate();
+  const { accessToken } = useAuthStore();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -10,15 +14,36 @@ export const SignUpForm = () => {
     password: '',
     department: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate('/auth');
+    setMessage(null);
+    setLoading(true);
+    try {
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        department: formData.department || undefined,
+      };
+      await apiClient.post('/auth/register', payload, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      });
+      setMessage('User created successfully');
+      navigate('/auth');
+    } catch (e: any) {
+      setMessage(e?.response?.data?.message ?? 'Registration failed (admin only)');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,11 +101,13 @@ export const SignUpForm = () => {
           onChange={handleChange}
         />
       </div>
+      {message && <div className="rounded-md bg-slate-50 p-2 text-sm text-slate-700">{message}</div>}
       <button
         type="submit"
-        className="w-full rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+        disabled={loading}
+        className="w-full rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
       >
-        Create account
+        {loading ? 'Creating...' : 'Create account'}
       </button>
       <p className="text-center text-xs text-slate-500">
         Already have an account?{' '}

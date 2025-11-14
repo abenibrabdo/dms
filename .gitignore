@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Test and coverage
+coverage/
+.nyc_output/
+
+# Env and secrets
+.env
+.env.*
+
+# Logs and tmp
+*.log
+logs/
+tmp/
+.cache/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Uploads (runtime)
+backend/uploads/

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bell, FileText, Home, Settings, Workflow } from 'lucide-react';
+import { Bell, FileText, Home, Settings, Workflow, BarChart3, Languages, ScrollText, RefreshCw } from 'lucide-react';
 
 import { useAuthStore } from '@store/authStore';
 
@@ -10,6 +10,10 @@ const navItems = [
   { to: '/workflows', label: 'Workflows', icon: <Workflow size={18} /> },
   { to: '/notifications', label: 'Notifications', icon: <Bell size={18} /> },
   { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
+  { to: '/analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+  { to: '/localization', label: 'Localization', icon: <Languages size={18} /> },
+  { to: '/audit', label: 'Audit', icon: <ScrollText size={18} /> },
+  { to: '/sync', label: 'Sync', icon: <RefreshCw size={18} /> },
 ];
 
 interface AppLayoutProps {

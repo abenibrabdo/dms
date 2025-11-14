@@ -1,7 +1,15 @@
 import { useWorkflows } from '@hooks/useWorkflows';
+import { apiClient } from '@services/apiClient';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const WorkflowsPage = () => {
+  const queryClient = useQueryClient();
   const { data, isLoading, isError } = useWorkflows();
+
+  const advance = async (id: string) => {
+    await apiClient.post(`/workflows/${encodeURIComponent(id)}`);
+    await queryClient.invalidateQueries({ queryKey: ['workflows'] });
+  };
   return (
     <div className="space-y-6">
       <header>
@@ -19,6 +27,7 @@ export const WorkflowsPage = () => {
                   <span className="font-medium">{wf.name}</span>
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{wf.status}</span>
                   <span className="ml-auto text-xs text-slate-500">steps: {(wf.steps?.length ?? 0)}</span>
+                  <button onClick={() => advance(wf.id)} className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100">Advance</button>
                 </div>
               </li>
             ))}
